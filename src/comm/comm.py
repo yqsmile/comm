@@ -8,26 +8,37 @@ import wx
 import threading
 
 
-import binascii
-import serial
 
+import binascii
+import serial.tools.list_ports
+
+
+
+from wx._misc import MessageBox
 
 
 
 
 
 class Comm():
-    def __init__(self):
-#         plist = list(serial.tools.list_ports.comports())
-#         if len(plist) <= 0:
-#             print "The Serial port can't find!"
-#         else:
-#             plist_0 =list(plist[0])
-#             serialName = plist_0[0]
-#             self.serialFd = serial.Serial(serialName,9600,timeout = 60)
-#             print "check which port was really used >",self.serialFd.name
 
-        self.serialFd = serial.Serial('COM3',115200)
+
+    def openCom(self):
+        
+#          self.serialFd = serial.Serial('COM1',9600,timeout = 60)
+
+        self.plist = list(serial.tools.list_ports.comports())
+        if len(self.plist) <= 0:
+            print "The Serial port can't find!"
+            MessageBox('faile to open serial port','error')
+             
+        else:
+            self.plist_0 =list(self.plist[0])
+            serialName = self.plist_0[0]
+            self.serialFd = serial.Serial(serialName,115200,timeout = 60)
+            print "check which port was really used >",self.serialFd.name
+
+    
     def comread(self):
         return self.serialFd.read(16)
     
@@ -47,22 +58,23 @@ class WorkThread(threading.Thread):
         self.timetoQuit = threading.Event()
         self.timetoQuit.clear()
         self.com = com
-        self.isOpen = False
+        self.doorisOpen = False
 
         
     def stop(self):
         self.timetoQuit.set()
     
     def run(self):    
+        self.com.openCom()
+        
+        self.window.showCom()
         while True:
             self.timetoQuit.wait(1)
             if self.timetoQuit.isSet():
                 break
             msg = self.com.comread()
             msg = msg.encode('hex')+'\n'
-#             if self.isOpen == False & msg[7] == '8' & msg[9] == '1' & msg[12] == '1':
-#                 self.com.senddata('cc ee 01 09 09 09 00 00 00 00 00 00 00 00 00 ff')
-#             if msg
+
             msg_chg = ''
             for i in range(0,len(msg)):
                 msg_chg +=msg[i]
@@ -72,6 +84,7 @@ class WorkThread(threading.Thread):
             
                 # TODO process data
             wx.CallAfter(self.window.LogMessage,msg)
+        
 
 
 class MyFrame(wx.Frame):
@@ -87,16 +100,23 @@ class MyFrame(wx.Frame):
         font = wx.Font(15,wx.DECORATIVE, wx.ITALIC, wx.NORMAL)
         startBtn = wx.Button(panel,-1,'start')
         stopBtn = wx.Button(panel,-1,'stop')
-        self.tc = wx.StaticText(panel,-1,'')
-
-        
-        
+        self.tc = wx.StaticText(panel,-1,'None')
+        self.tc.SetFont(font)
+        self.tc2 = wx.TextCtrl(panel,-1,'0',style = wx.TE_READONLY)
+        self.tc2.SetFont(font)
+#         comList = wx.Choice(panel,-1,choices = self.com.getcom())
+           
         self.log = wx.TextCtrl(panel,-1,'',style = wx.TE_MULTILINE)
         self.log.SetBackgroundColour('gray')
         inner = wx.BoxSizer(wx.HORIZONTAL)
         inner.Add(startBtn,0,wx.RIGHT,15)
         inner.Add(stopBtn,0,wx.RIGHT,15)
-        inner.Add(self.tc,0,wx.ALIGN_CENTER_VERTICAL)
+        inner.Add(self.tc,0,wx.RIGHT,15)
+        inner.Add(self.tc2,0,wx.RIGHT,5)
+        
+        
+        
+#         inner.Add(comList)
         
         self.sendtext = wx.TextCtrl(panel,-1,'',size = (280,30))
         
@@ -116,17 +136,19 @@ class MyFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnSendButton,sendBtn)
         self.Bind(wx.EVT_CLOSE, self.OnCloseWindow)
         
-        self.UpdateCount()
+        
         
     def OnStartButton(self,evt):
         if self.count == 0:
             self.count+=1
             thread = WorkThread(self.count,self,self.com)
             self.threads.append(thread)
-            self.UpdateCount()
+        
+
             thread.start()
     def OnStopButton(self, evt):
         self.StopThreads()
+        self.tc.SetLabel('None')
         
     def OnSendButton(self,evt):
         sendmsg = self.sendtext.GetValue().split()
@@ -137,15 +159,17 @@ class MyFrame(wx.Frame):
        
     def OnCloseWindow(self, evt):
         self.StopThreads()
-        self.Destroy()    
-        self.com.serialFd.close()
+        self.Destroy()   
+        if self.com.serialFd.isOpen():
+            self.com.serialFd.close()
+
     def StopThreads(self):
         while self.threads:
             thread = self.threads[0]
             thread.stop()
             self.threads.remove(thread)  
             print -1
-    def UpdateCount(self):
+    def showCom(self):
         self.tc.SetLabel(self.com.getcom())          
     def LogMessage(self, msg):
         self.log.AppendText(msg)
