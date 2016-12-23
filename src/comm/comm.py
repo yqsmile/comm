@@ -88,18 +88,20 @@ class WorkThread(threading.Thread):
    
             if (self.doorisopened == False) and (msg[6:12]=='09dd09'):
                 self.doorisopened = True
+                sleep(10)
                 self.com.senddata('cc ee 01 09 0b 00 00 00 00 00 00 00 00 00 00 ff')
-                print 'door id open'
+                print 'door id opened'
 
                    
             if (self.doorisopened == True) and (msg[6:12] == '080100'):
                 self.com.senddata('cc ee 01 09 0a 00 00 00 00 00 00 00 00 00 00 ff')
-                print 'stop moto'
+                print 'close door'
               
             if (self.doorisopened == True) and (msg[6:12] == '09dd0a'):
                 self.doorisopened = False
-                print 'close door'
+                sleep(10)
                 self.com.senddata('cc ee 01 09 0b 00 00 00 00 00 00 00 00 00 00 ff')
+                print 'door is closed'
     
             msg_chg = ''
             for i in range(0,len(msg)):
