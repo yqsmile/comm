@@ -45,18 +45,7 @@ class Comm():
     
     def senddata(self,sendmsg):
         sendmsg_list = sendmsg.split()
-#         sendmsg_str = ''
-#         for i in range(1,len(sendmsg_list)):
-#             sendmsg_str += sendmsg_list[i]
-#   
-#         sendmsg_hex = binascii.a2b_hex(sendmsg_str)
-#         self.serialFd.write(sendmsg_hex)
-#         print sendmsg_hex
- 
-#         self.serialFd.write(sendmsg_str.encode("utf-8"))
-
-    
-           
+     
         for i in range(0,len(sendmsg_list)):
             sendmsg_hex = binascii.a2b_hex(sendmsg_list[i])
             self.serialFd.write(sendmsg_hex)
@@ -93,21 +82,21 @@ class WorkThread(threading.Thread):
             msg = self.com.comread()
             msg = msg.encode('hex')+'\n'
             
-            if (self.doorisopened==False) & (msg.[6:12]=='080101'):
+            if (self.doorisopened==False) and (msg[6:12]=='080101'):
                 self.com.senddata('cc ee 01 09 09 00 00 00 00 00 00 00 00 00 00 ff')
                 print 'open door'
    
-            if (self.doorisopened == False) & (msg.[6:12]=='09dd09'):
+            if (self.doorisopened == False) and (msg[6:12]=='09dd09'):
                 self.doorisopened = True
                 self.com.senddata('cc ee 01 09 0b 00 00 00 00 00 00 00 00 00 00 ff')
                 print 'door id open'
 
                    
-            if (self.doorisopened == True) & (msg.[6:12] == '080100'):
+            if (self.doorisopened == True) and (msg[6:12] == '080100'):
                 self.com.senddata('cc ee 01 09 0a 00 00 00 00 00 00 00 00 00 00 ff')
                 print 'stop moto'
               
-            if (self.doorisopened == True) & (msg.[6:12] == '09dd0a'):
+            if (self.doorisopened == True) and (msg[6:12] == '09dd0a'):
                 self.doorisopened = False
                 print 'close door'
                 self.com.senddata('cc ee 01 09 0b 00 00 00 00 00 00 00 00 00 00 ff')
